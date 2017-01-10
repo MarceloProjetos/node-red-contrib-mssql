@@ -1,51 +1,57 @@
 module.exports = function(RED) {
-	'use strict';
-	var mustache = require('mustache');
-	var sql = require('mssql');
+  'use strict';
+  var mustache = require('mustache');
+  var sql = require('mssql');
 
-	function connection(config) {
-	    RED.nodes.createNode(this, config);
+  function connection(config) {
+      RED.nodes.createNode(this, config);
 
       var node = this;
-	    this.config = {
+      this.config = {
             user: node.credentials.username,
             password: node.credentials.password,
-						domain: node.credentials.domain,
+            domain: node.credentials.domain,
             server: config.server,
+            port: config.port,
             database: config.database,
             options: {
                            encrypt : config.encyption,
                            useUTC: config.useUTC
-                       }
+                       },
+            pool: {
+                max: config.pool,
+                min: 0,
+                idleTimeoutMillis: 30000
+            },
         };
 
 
-	    this.connection = sql;
-			/*
-			node.on('close',function(){
-   			node.pool.close(function(){});
-   		})
-			*/
-		}
+      this.connection = sql;
+      /*
+      node.on('close',function(){
+        node.pool.close(function(){});
+      })
+      */
+    }
 
-  	RED.nodes.registerType('MSSQL-CN', connection, {
-	    credentials: {
-				username: {type:'text'},
-				password: {type:'password'},
-				domain: {type: 'text'}
-	    }
-	});
+    RED.nodes.registerType('MSSQL-CN', connection, {
+      credentials: {
+        username: {type:'text'},
+        password: {type:'password'},
+        domain: {type: 'text'}
+      }
+  });
 
-  	function mssql(config) {
-	    RED.nodes.createNode(this, config);
-	    var mssqlCN = RED.nodes.getNode(config.mssqlCN);
-	    this.query = config.query;
-	    this.connection = mssqlCN.connection;
-	    this.config = mssqlCN.config;
-	    this.outField = config.outField;
+    function mssql(config) {
+      RED.nodes.createNode(this, config);
+      var mssqlCN = RED.nodes.getNode(config.mssqlCN);
+      this.query = config.query;
+      this.connection = mssqlCN.connection;
+      this.config = mssqlCN.config;
+      this.outField = config.outField;
 
       var node = this;
-	    var b = node.outField.split('.');
+      var b = node.outField.split('.');
       var i = 0;
       var r = null;
       var m = null;
@@ -83,10 +89,10 @@ module.exports = function(RED) {
             var request = new node.connection.Request();
 
             request.query(query).then(function (rows){
-        		i = 0;
-        		r = rows;
-        		m = msg;
-        		rec(msg);
+            i = 0;
+            r = rows;
+            m = msg;
+            rec(msg);
             }).catch(function(err) {
                 node.error(err);
                 node.status({fill:'red',shape:'ring',text:'Error'});
@@ -95,12 +101,12 @@ module.exports = function(RED) {
 
 
         }).catch(function(err) {
-    		node.error(err);
-    		node.status({fill:'red',shape:'ring',text:'Error'});
-    		return;
+        node.error(err);
+        node.status({fill:'red',shape:'ring',text:'Error'});
+        return;
         });
       });
 
-	}
-  	RED.nodes.registerType('MSSQL', mssql);
+  }
+    RED.nodes.registerType('MSSQL', mssql);
 };
